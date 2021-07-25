@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:api-gateway="http://www.mulesoft.org/schema/mule/api-gateway" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd 
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd">
+    <http:listener-config name="POC_mng-httpListenerConfig">
+        <http:listener-connection host="0.0.0.0" port="8081" />
+    </http:listener-config>
+    <apikit:config name="POC_mng-config" api="resource::c54684b5-bb7d-4229-bb6b-8c60c0b90d83:custsession:1.0.3:raml:zip:POC_mng.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="0daf5c0a-4e67-47b5-902f-a2f4501a445b" >
+		<db:my-sql-connection host="${db.host}" port="${db.port}" user="${secure::db.user}" password="${secure::db.password}" database="${db.database}" />
+	</db:config>
+	<configuration-properties doc:name="Configuration properties" doc:id="c3188ff8-ca20-42c4-be25-6020fc8216f0" file="dev.properties" />
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="16cc5704-2415-4d8f-a316-471f83c189a8" file="dev.secure.properties" key="123456789" >
+		<secure-properties:encrypt algorithm="Blowfish" />
+	</secure-properties:config>
+	<api-gateway:autodiscovery apiId="17094338" ignoreBasePath="true" doc:name="API Autodiscovery" doc:id="dd873fb9-4526-431a-9191-e71eeee63456" flowRef="POC_mng-main" />
+	<flow name="POC_mng-main">
+        <http:listener config-ref="POC_mng-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="POC_mng-config" />
+    </flow>
+    <flow name="delete:\removeUser:POC_mng-config">
+		<ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  Message: "Customer deleted success"
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="patch:\updateTel:POC_mng-config">
+        <db:update doc:name="Update" doc:id="877b5452-1991-4239-927a-9f7efd6485e2" config-ref="Database_Config">
+			<db:sql ><![CDATA[UPDATE CUST SET telephone = :mobile where id = :id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	mobile : payload.telephone,
+	id : payload.id
+}]]]></db:input-parameters>
+		</db:update>
+		<ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  Messsage: "telephone number has been updated"
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="get:\getAllCustomers:POC_mng-config">
+        <db:select doc:name="Select" doc:id="3a57304f-9e85-4b5a-a450-0cce63a83448">
+			<db:sql ><![CDATA[${db.selectall.query}]]></db:sql>
+		</db:select>
+		<ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="get:\getcustomerByID:POC_mng-config">
+        <set-variable value="#[attributes.queryParams.CustomerId]" doc:name="Set Variable" doc:id="6ea2df03-63ec-4379-b91f-ce2779b67127" variableName="cusId"/>
+		<set-variable value="how are you" doc:name="Set Variable" doc:id="902a1d8e-af8c-4109-aedd-0e97c4939ae7" variableName="defvalue"/>
+		<db:select doc:name="Select" doc:id="c41b04dd-9534-4eb7-9e0b-69f72399f8d1" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from CUST where id = :id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id : attributes.queryParams.CustomerId
+}]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Choice" doc:id="bdb33a54-8469-4782-ae87-52f4967eeece" >
+			<when expression="#[sizeof(payload) &gt; 0]">
+				<ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd" doc:id="84d536d3-197b-4178-ab6e-fe877b0f9aca">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"ApplicationEnvironment" :p('mule.env'),
+	"Response": payload
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Transform Message" doc:id="260d152a-905d-4b9c-87f9-bff91f26018e" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"ApplicationEnvironment" :p('mule.env'),
+	"Response": payload,
+	"Message" : "for the given customerID , there is no record "
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="Logger" doc:id="bc888375-eb52-48df-8ffe-6b102147e52d" />
+    </flow>
+	<flow name="post:\createCustomeraccount:application\json:POC_mng-config">
+		<foreach doc:name="For Each" doc:id="65742e85-2160-4a93-a0bc-862892619ab9" >
+			<logger level="INFO" doc:name="Logger" doc:id="2c4fe73d-d2b2-415d-b590-da55bab1cd89" message="Req going to insert"/>
+			<db:insert doc:name="Insert" doc:id="18811d34-e03b-460a-a023-d6fb4912b30e" config-ref="Database_Config">
+			<db:sql><![CDATA[INSERT INTO CUST (name, telephone, Address, Email) VALUES (:name ,:telephone, :Address, :Email)]]></db:sql>
+			<db:input-parameters><![CDATA[#[{
+	name : payload.name,
+	telephone: payload.telephone,
+	Address: payload.address,
+	Email: payload.Email
+	
+	
+}]]]></db:input-parameters>
+		</db:insert>
+			<logger level="INFO" doc:name="Logger" doc:id="afcd58b4-e3b7-46af-9594-eb4e2220a932" message="after insertion"/>
+		</foreach>
+		<ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  meassage: "customer created succesfully , try to login now"
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+</mule>

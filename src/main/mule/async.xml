@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="asyncFlow" doc:id="395b49ec-e609-4b9e-b447-e848924d140e" >
+		<http:listener doc:name="Listener" doc:id="7894cee3-383e-4696-b88a-7f70e856d1e1" config-ref="POC_mng-httpListenerConfig" path="/async"/>
+		<logger level="INFO" doc:name="Logger" doc:id="6538602d-6822-462a-89a2-597804298654" message="Request Received"/>
+		<async doc:name="Async" doc:id="e68696fa-602e-4d66-8dbf-7cac9cee3c29" >
+			<logger level="INFO" doc:name="Logger" doc:id="31e617ab-6f7a-4fb3-8b52-24ed9a3c8f73" message="Request Received by async"/>
+			<db:insert doc:name="Insert" doc:id="1e77dbff-3b0e-4dc3-927a-3576e43add58" config-ref="Database_Config">
+				<db:sql ><![CDATA[insert into CUST (name,telephone,Address,Email) values (:name,:telephone,:Address,:Email)]]></db:sql>
+				<db:input-parameters ><![CDATA[#[{
+	name : payload.name,
+	telephone: payload.telephone,
+	Address: payload.Address,
+	Email: payload.Email
+}]]]></db:input-parameters>
+			</db:insert>
+			<logger level="INFO" doc:name="Logger" doc:id="4483339f-6829-4507-a03b-e3cb0d8c7e9a" message="Inserted Successful"/>
+		</async>
+		<ee:transform doc:name="Transform Message" doc:id="ecfdd31a-94c3-48ca-ac96-690e21f1f294" >
+			<ee:message >
+				<ee:set-payload ><![CDATA["Order placed Successfully"]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>

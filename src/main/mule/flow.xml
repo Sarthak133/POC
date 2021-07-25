@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<flow name="flowFlow" doc:id="913c5297-e6f7-4c8b-a860-e63aef2da699" >
+		<http:listener doc:name="Listener" doc:id="cc3a45d8-4c33-4953-a079-e9793bcce217" config-ref="POC_mng-httpListenerConfig" path="/flows"/>
+		<logger level="INFO" doc:name="Logger" doc:id="47d12b35-1545-4dbf-a54b-69cd3861a773" message="request received"/>
+		<ee:transform doc:name="Transform Message" doc:id="eac9c4c9-6949-4125-9f95-cc63f18b246f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<flow-ref doc:name="Flow Reference" doc:id="0a52c260-fcba-49ef-b32d-6ecd9bfc73f2" name="flowSub_Flow"/>
+		<logger level="INFO" doc:name="Logger" doc:id="d3318f19-a551-444f-ada3-d6db547c6e74" message="#[payload]"/>
+	</flow>
+	<sub-flow name="flowSub_Flow" doc:id="6f461e74-5eb1-4dc4-b1f8-824f4037c216" >
+		<logger level="INFO" doc:name="Logger" doc:id="f84471ae-1c72-43c5-a549-ea86730a0fda" message="request received in sub flow"/>
+		<db:select doc:name="Select" doc:id="a1588ea2-c356-4b0e-961f-1fe758084df9" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from CUST where id = :empid]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	empid : attributes.queryParams.id
+}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="ed01ff35-5317-4082-a9d7-a1c569792f2c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+</mule>
