@@ -39,6 +39,7 @@ output application/json
 }]]></ee:set-payload>
             </ee:message>
         </ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="993d3022-b509-499c-9e7d-b4e036cc0041" message="done"/>
     </flow>
     <flow name="patch:\updateTel:POC_mng-config">
         <db:update doc:name="Update" doc:id="877b5452-1991-4239-927a-9f7efd6485e2" config-ref="Database_Config">
